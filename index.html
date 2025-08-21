@@ -6,39 +6,60 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
-    #video { width: 100%; max-width: 400px; border: 2px solid #333; border-radius: 8px; }
+    video { width: 100%; max-width: 400px; border: 2px solid #333; border-radius: 8px; }
     #output { margin-top: 15px; font-size: 24px; font-weight: bold; color: blue; }
-    button { margin-top: 10px; padding: 8px 16px; font-size: 16px; }
   </style>
 </head>
 <body>
   <h2>🔢 OCR Number Scanner</h2>
-  <video id="video" autoplay></video>
+  <video id="video" autoplay playsinline></video>
   <canvas id="canvas" style="display:none;"></canvas>
-  <div id="output">Scanning...</div>
-  <button onclick="scanText()">Scan Number</button>
+  <div id="output">Initializing camera...</div>
 
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const output = document.getElementById('output');
+    let scanning = false;
 
     // Start camera
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => video.srcObject = stream);
+      .then(stream => {
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          output.textContent = "Camera ready, scanning...";
+          startAutoScan();
+        };
+      })
+      .catch(err => {
+        output.textContent = "❌ Camera access failed: " + err.message;
+      });
 
-    async function scanText() {
-      // Draw current frame into canvas
+    async function scanFrame() {
+      if (scanning) return;
+      scanning = true;
+
+      // Draw frame into canvas
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
 
-      // Run OCR
-      output.textContent = "Reading...";
-      const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
-        tessedit_char_whitelist: '0123456789' // numbers only
-      });
-      output.textContent = "Detected: " + text.trim();
+      try {
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
+          tessedit_char_whitelist: '0123456789'
+        });
+        if (text.trim()) {
+          output.textContent = "✅ Detected: " + text.trim();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
+      scanning = false;
+    }
+
+    function startAutoScan() {
+      setInterval(scanFrame, 2000); // scan every 2s
     }
   </script>
 </body>
