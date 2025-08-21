@@ -17,19 +17,18 @@
     #scanner {
       width: 100%;
       max-width: 400px;
-      height: 220px;
+      height: 250px;
       margin: 1rem auto;
       border-radius: 8px;
-      background: black; /* black background */
+      background: black;
       position: relative;
       overflow: hidden;
     }
     #scanner video {
       width: 100% !important;
       height: 100% !important;
-      object-fit: cover;  /* fill entire box */
-      position: absolute;
-      top: 0; left: 0;
+      object-fit: cover;   /* Fill the box fully */
+      transform: rotate(0deg); /* adjust if camera appears sideways */
     }
   </style>
 </head>
@@ -39,7 +38,6 @@
 
     <!-- Scanner -->
     <div id="scanner" class="dce-video-container"></div>
-    <audio id="beep" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
     <!-- Manual input -->
     <input id="orderInput" type="text" placeholder="#1001" style="margin-top:1rem;width:100%;padding:.5rem;">
@@ -59,7 +57,20 @@
     const btnCheck = document.getElementById("scanBtn");
     const btnFulfill = document.getElementById("fulfillBtn");
     const result = document.getElementById("result");
-    const beep = document.getElementById("beep");
+
+    // --- Beep generator (Web Audio API works on iOS) ---
+    function playBeep() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 1000; // Hz
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      gainNode.gain.setValueAtTime(0.1, ctx.currentTime); // volume
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15); // 150ms beep
+    }
 
     // --- Check Order ---
     async function checkOrder(orderNumber) {
@@ -123,7 +134,7 @@
     // --- Barcode Scanner Init ---
     (async () => {
       try {
-        Dynamsoft.DBR.BarcodeScanner.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0NDM3MTU3LU1UQTBORE0zTVRVM0xYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDQzNzE1NyIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6ODc2MzE4NDAxfQ=="; // replace with your key
+        Dynamsoft.DBR.BarcodeScanner.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0NDM3MTU3LU1UQTBORE0zTVRVM0xYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDQzNzE1NyIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6ODc2MzE4NDAxfQ=="; // replace with key
         const scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
         await scanner.setUIElement(document.getElementById("scanner"));
 
@@ -132,11 +143,10 @@
         settings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_CODE_128;
         await scanner.updateRuntimeSettings(settings);
 
-        // When scanned
         scanner.onUnduplicatedRead = (txt, result) => {
-          input.value = txt;   // put scanned code into input field
-          beep.play();         // play sound
-          checkOrder(txt);     // auto-check order
+          input.value = txt;
+          playBeep();          // 🔊 confirm sound
+          checkOrder(txt);
         };
 
         await scanner.show();
