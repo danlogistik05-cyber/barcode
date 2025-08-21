@@ -1,45 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>iPhone Barcode Scanner</title>
+  <title>Barcode → Shopify Order Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 20px; }
-    #reader { width: 100%; max-width: 400px; margin: auto; }
-    #result { margin-top: 20px; font-size: 1.2em; font-weight: bold; }
-    button { padding: 10px 20px; margin-top: 20px; font-size: 1em; }
+    body { font-family: Arial, sans-serif; background:#f9f9f9; padding:1rem; text-align:center; }
+    .card { background:#fff; padding:1rem; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.1); max-width:600px; margin:0 auto; }
+    .result { margin-top:1rem; padding:1rem; border-radius:8px; background:#f3f3f3; white-space:pre-wrap; text-align:left; }
+    button { margin-top:.5rem; padding:.5rem 1rem; border:none; border-radius:6px; cursor:pointer; }
+    #scanBtn { background:#007bff; color:#fff; }
+    #fulfillBtn { background:#28a745; color:#fff; display:none; }
+    #reader { width: 100%; max-width: 400px; margin: 1rem auto; }
   </style>
 </head>
 <body>
-  <h1>📷 Barcode Scanner</h1>
-  <div id="reader"></div>
-  <div id="result">Press start to scan...</div>
-  <button onclick="startScanning()">Start Scanning</button>
-  <button onclick="stopScanning()">Stop</button>
+  <div class="card">
+    <h2>📦 Ordre Klargøring</h2>
+
+    <!-- Manual input -->
+    <input id="orderInput" type="text" placeholder="#1001" style="margin-top:1rem;width:100%;padding:.5rem;">
+
+    <!-- Buttons -->
+    <button id="scanBtn" onclick="startScanning()">📷 Scan Ordre</button>
+    <button id="fulfillBtn">Klargør</button>
+
+    <!-- Scanner -->
+    <div id="reader"></div>
+
+    <!-- Results -->
+    <div id="result" class="result" style="display:none;"></div>
+  </div>
 
   <script>
+    const workerUrl = "https://sg.jatransport001.workers.dev/"; // replace with your Worker URL
+    const input = document.getElementById("orderInput");
+    const btnCheck = document.getElementById("scanBtn");
+    const btnFulfill = document.getElementById("fulfillBtn");
+    const result = document.getElementById("result");
     let html5QrCode;
 
-    function startScanning() {
-      html5QrCode = new Html5Qrcode("reader");
+    // --- Check Order ---
+    async function checkOrder(orderNumber) {
+      if (!orderNumber) return;
+      result.style.display = "block";
+      result.textContent = "Søger efter ordre…";
+      btnFulfill.style.display = "none";
 
+      try {
+        const r = await fetch(workerUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "check", orderNumber })
+        });
+        const data = await r.json();
+
+        if (!data.exists) {
+          result.textContent = "❌ No matching order found.";
+          return;
+        }
+
+        const o = data.order;
+        let html = `Ordre ${o.name}\n\nProdukter:\n`;
+        o.lineItems.forEach(li => {
+          html += `- ${li.title} x${li.quantity}\n`;
+        });
+
+        result.textContent = html;
+        btnFulfill.style.display = "inline-block";
+
+      } catch (err) {
+        result.textContent = "⚠️ Error: " + err.message;
+      }
+    }
+
+    // --- Fulfill Order ---
+    async function fulfillOrder(orderNumber) {
+      result.style.display = "block";
+      result.textContent = "Prøver at klargøre ordren…";
+
+      try {
+        const r = await fetch(workerUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "fulfillByName", orderNumber })
+        });
+        const data = await r.json();
+
+        if (data.success) {
+          result.textContent = `✅ Ordren er blevet klargjort`;
+        } else {
+          result.textContent = `❌ Klargøring fejlede\nError: ${data.error || "Unknown"}`;
+        }
+      } catch (err) {
+        result.textContent = "⚠️ Error: " + err.message;
+      }
+    }
+
+    btnFulfill.addEventListener("click", () => fulfillOrder(input.value.trim()));
+    input.addEventListener("keydown", e => { if (e.key === "Enter") checkOrder(input.value.trim()); });
+
+    // --- Barcode Scanner ---
+    function startScanning() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => html5QrCode.clear());
+      }
+      html5QrCode = new Html5Qrcode("reader");
       const qrConfig = { fps: 10, qrbox: 250 };
 
       html5QrCode.start(
-        { facingMode: "environment" }, // ✅ force rear camera
+        { facingMode: "environment" },
         qrConfig,
         (decodedText) => {
-          document.getElementById("result").innerText = `Scanned: ${decodedText}`;
-          // stop after first scan
-          stopScanning();
+          input.value = decodedText;   // put scanned code in input
+          stopScanning();              // stop scanner after first scan
+          checkOrder(decodedText);     // auto search order
         },
         (errorMessage) => {
-          // console.log(`Scan error: ${errorMessage}`);
+          // scanning errors ignored
         }
       ).catch(err => {
         console.error("Camera start failed:", err);
-        document.getElementById("result").innerText = "⚠️ Camera error: " + err;
+        result.style.display = "block";
+        result.textContent = "⚠️ Camera error: " + err;
       });
     }
 
