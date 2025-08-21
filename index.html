@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Shopify Order Checker (Fast Barcode)</title>
+  <title>Shopify Order Checker (Fast ZXing)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://unpkg.com/quagga/dist/quagga.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
   <style>
     body { font-family: Arial, sans-serif; background:#f9f9f9; padding:1rem; text-align:center; }
     .card { background:#fff; padding:1rem; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.1); max-width:600px; margin:0 auto; }
@@ -12,12 +12,12 @@
     button { margin-top:.5rem; padding:.5rem 1rem; border:none; border-radius:6px; cursor:pointer; }
     #scanBtn { background:#007bff; color:#fff; }
     #fulfillBtn { background:#28a745; color:#fff; display:none; }
-    #scanner { width: 100%; max-width: 400px; margin: 1rem auto; }
+    #video { width:100%; max-width:400px; margin:1rem auto; border:1px solid #ccc; border-radius:8px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>📦 Ordre Klargøring V2</h2>
+    <h2>📦 Ordre Klargøring</h2>
 
     <!-- Manual input -->
     <input id="orderInput" type="text" placeholder="#1001" style="margin-top:1rem;width:100%;padding:.5rem;">
@@ -26,8 +26,8 @@
     <button id="scanBtn">📷 Scan Ordre</button>
     <button id="fulfillBtn">Klargør</button>
 
-    <!-- Scanner -->
-    <div id="scanner"></div>
+    <!-- Scanner video -->
+    <video id="video" autoplay muted playsinline></video>
 
     <!-- Results -->
     <div id="result" class="result" style="display:none;"></div>
@@ -39,6 +39,10 @@
     const btnScan = document.getElementById("scanBtn");
     const btnFulfill = document.getElementById("fulfillBtn");
     const result = document.getElementById("result");
+    const videoElem = document.getElementById("video");
+
+    let codeReader = null;
+    let scanning = false;
 
     // --- Check Order ---
     async function checkOrder(orderNumber) {
@@ -100,53 +104,46 @@
     btnFulfill.addEventListener("click", () => fulfillOrder(input.value.trim()));
     input.addEventListener("keydown", e => { if (e.key === "Enter") checkOrder(input.value.trim()); });
 
-    // --- Quagga Barcode Scanner ---
-    let scanning = false;
-
+    // --- ZXing Barcode Scanner ---
     btnScan.addEventListener("click", () => {
       if (scanning) {
-        Quagga.stop();
-        scanning = false;
-        btnScan.textContent = "📷 Scan Ordre";
-        return;
+        stopScanning();
+      } else {
+        startScanning();
       }
+    });
 
-      Quagga.init({
-        inputStream: {
-          type: "LiveStream",
-          constraints: {
-            facingMode: "environment" // use rear camera
-          },
-          target: document.querySelector('#scanner'),
-        },
-        decoder: {
-          readers: ["code_128_reader", "ean_reader", "ean_8_reader", "upc_reader", "upc_e_reader"]
-        },
-        locate: true
-      }, function(err) {
-        if (err) {
-          console.error(err);
-          result.style.display = "block";
-          result.textContent = "⚠️ Camera error: " + err;
-          return;
-        }
-        Quagga.start();
+    async function startScanning() {
+      codeReader = new ZXing.BrowserMultiFormatReader();
+      try {
+        await codeReader.decodeFromVideoDevice(
+          { facingMode: "environment" },
+          videoElem,
+          (result, err) => {
+            if (result) {
+              const code = result.getText();
+              input.value = code;
+              stopScanning();
+              checkOrder(code);
+            }
+          }
+        );
         scanning = true;
         btnScan.textContent = "⏹ Stop Scanning";
-      });
+      } catch (err) {
+        console.error("Camera error:", err);
+        result.style.display = "block";
+        result.textContent = "⚠️ Camera error: " + err;
+      }
+    }
 
-      Quagga.onDetected(function(res) {
-        if (res && res.codeResult && res.codeResult.code) {
-          const code = res.codeResult.code;
-          console.log("Detected:", code);
-          input.value = code;       // put scanned code in input
-          checkOrder(code);         // auto-search order
-          Quagga.stop();            // stop scanner after first detection
-          scanning = false;
-          btnScan.textContent = "📷 Scan Ordre";
-        }
-      });
-    });
+    function stopScanning() {
+      if (codeReader) {
+        codeReader.reset();
+      }
+      scanning = false;
+      btnScan.textContent = "📷 Scan Ordre";
+    }
   </script>
 </body>
 </html>
