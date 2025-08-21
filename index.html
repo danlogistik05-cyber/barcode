@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>iPhone Barcode Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    #reader { width: 100%; max-width: 400px; margin: auto; }
+    #result { margin-top: 20px; font-size: 1.2em; font-weight: bold; }
+    button { padding: 10px 20px; margin-top: 20px; font-size: 1em; }
+  </style>
+</head>
+<body>
+  <h1>📷 Barcode Scanner</h1>
+  <div id="reader"></div>
+  <div id="result">Press start to scan...</div>
+  <button onclick="startScanning()">Start Scanning</button>
+  <button onclick="stopScanning()">Stop</button>
+
+  <script>
+    let html5QrCode;
+
+    function startScanning() {
+      html5QrCode = new Html5Qrcode("reader");
+
+      const qrConfig = { fps: 10, qrbox: 250 };
+
+      html5QrCode.start(
+        { facingMode: "environment" }, // ✅ force rear camera
+        qrConfig,
+        (decodedText) => {
+          document.getElementById("result").innerText = `Scanned: ${decodedText}`;
+          // stop after first scan
+          stopScanning();
+        },
+        (errorMessage) => {
+          // console.log(`Scan error: ${errorMessage}`);
+        }
+      ).catch(err => {
+        console.error("Camera start failed:", err);
+        document.getElementById("result").innerText = "⚠️ Camera error: " + err;
+      });
+    }
+
+    function stopScanning() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+        }).catch(err => console.error("Stop failed", err));
+      }
+    }
+  </script>
+</body>
+</html>
