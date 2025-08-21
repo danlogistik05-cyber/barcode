@@ -13,14 +13,21 @@
     #scanner {
       width: 100%;
       max-width: 400px;
-      height: 220px; /* smaller preview */
+      height: 250px;
       margin: auto;
       border: 2px solid #333;
       border-radius: 8px;
-      overflow: hidden;
       position: relative;
+      overflow: hidden;
     }
-    /* overlay guide box */
+    #scanner video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
     #guide {
       position: absolute;
       top: 30%;
@@ -29,6 +36,7 @@
       height: 40%;
       border: 2px dashed red;
       pointer-events: none;
+      z-index: 10;
     }
     #output {
       margin-top: 20px;
@@ -41,9 +49,12 @@
 <body>
   <h2>🚀 Ultra Fast Barcode Scanner (Code128)</h2>
   <div id="scanner" class="dce-video-container">
-    <div id="guide"></div> <!-- guide box -->
+    <div id="guide"></div>
   </div>
   <div id="output">📷 Hold barcode inside the red box</div>
+
+  <!-- simple beep sound -->
+  <audio id="beep" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
   <script>
     (async () => {
@@ -57,21 +68,20 @@
         // Restrict to Code128
         let settings = await scanner.getRuntimeSettings();
         settings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_CODE_128;
-
-        // ✅ Define region of interest (in percentages)
         settings.region = {
-          regionLeft: 15,   // %
-          regionTop: 30,    // %
-          regionRight: 85,  // %
-          regionBottom: 70, // %
+          regionLeft: 15,
+          regionTop: 30,
+          regionRight: 85,
+          regionBottom: 70,
           regionMeasuredByPercentage: 1
         };
-
         await scanner.updateRuntimeSettings(settings);
 
-        // Event for unique scans
+        // Play sound when scanned
+        const beep = document.getElementById("beep");
         scanner.onUnduplicatedRead = (txt, result) => {
           document.getElementById("output").textContent = "✅ " + txt;
+          beep.play(); // 🔊 play confirmation sound
         };
 
         await scanner.show();
