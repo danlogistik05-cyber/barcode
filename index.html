@@ -39,7 +39,7 @@
   </style>
 </head>
 <body>
-  <h2>🚀</h2>
+  <h2>🚀 Ultra Fast Barcode Scanner (Code128)</h2>
   <div id="scanner" class="dce-video-container">
     <div id="guide"></div> <!-- guide box -->
   </div>
@@ -54,22 +54,22 @@
         const scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
         await scanner.setUIElement(document.getElementById('scanner'));
 
-        // Restrict to Code128 for speed
+        // Restrict to Code128
         let settings = await scanner.getRuntimeSettings();
         settings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_CODE_128;
+
+        // ✅ Define region of interest (in percentages)
+        settings.region = {
+          regionLeft: 15,   // %
+          regionTop: 30,    // %
+          regionRight: 85,  // %
+          regionBottom: 70, // %
+          regionMeasuredByPercentage: 1
+        };
+
         await scanner.updateRuntimeSettings(settings);
 
-        // Define region of interest (center rectangle)
-        scanner.setScanSettings({
-          Region: {
-            regionLeft: 15,   // percentage
-            regionTop: 30,
-            regionRight: 85,
-            regionBottom: 70,
-            regionMeasuredByPercentage: 1
-          }
-        });
-
+        // Event for unique scans
         scanner.onUnduplicatedRead = (txt, result) => {
           document.getElementById("output").textContent = "✅ " + txt;
         };
