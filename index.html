@@ -6,37 +6,35 @@
   <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.30/dist/dbr.js"></script>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
-    #scanner { width: 100%; max-width: 400px; margin: auto; border: 2px solid #333; border-radius: 8px; }
+    #scanner { width: 100%; max-width: 400px; height: 300px; margin: auto; border: 2px solid #333; border-radius: 8px; }
     #output { margin-top: 15px; font-size: 28px; font-weight: bold; color: green; }
   </style>
 </head>
 <body>
-  <h2>TESTER Ultra Fast Barcode Scanner (Code128)</h2>
-  <div id="scanner"></div>
+  <h2>🚀</h2>
+  <div id="scanner" class="dce-video-container"></div>
   <div id="output">Initializing...</div>
 
   <script>
     (async () => {
       try {
-        // 🔑 Replace with your trial key from Dynamsoft
+        // 🔑 Replace with your trial key
         Dynamsoft.DBR.BarcodeScanner.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0NDM3MTU3LU1UQTBORE0zTVRVM0xYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDQzNzE1NyIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6ODc2MzE4NDAxfQ==";
 
-        // Create scanner instance
         const scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
 
-        // Attach to page
+        // Attach camera feed into #scanner
         await scanner.setUIElement(document.getElementById('scanner'));
 
-        // Restrict to Code128 for speed
+        // Only scan Code128
         let settings = await scanner.getRuntimeSettings();
         settings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_CODE_128;
         await scanner.updateRuntimeSettings(settings);
 
-        // Start scanning
         scanner.onFrameRead = results => {
           for (let result of results) {
             document.getElementById("output").textContent = "✅ " + result.barcodeText;
-            scanner.stopScanning(); // stop after first scan
+            scanner.stopScanning();
           }
         };
 
