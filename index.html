@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>OCR Number Scanner</title>
+  <title>Barcode Number Reader</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
@@ -11,7 +11,7 @@
   </style>
 </head>
 <body>
-  <h2>🔢 OCR Number Scanner</h2>
+  <h2>🔢 Barcode Number Reader</h2>
   <video id="video" autoplay playsinline></video>
   <canvas id="canvas" style="display:none;"></canvas>
   <div id="output">Initializing camera...</div>
@@ -39,13 +39,25 @@
       if (scanning) return;
       scanning = true;
 
-      // Draw frame into canvas
+      // Draw current frame into canvas
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+
+      // Crop bottom strip where numbers are (10–20% from bottom)
+      const cropHeight = Math.floor(canvas.height * 0.2);
+      const cropY = canvas.height - cropHeight;
+      const cropped = ctx.getImageData(0, cropY, canvas.width, cropHeight);
+
+      // Create a temp canvas for OCR
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = cropped.width;
+      tempCanvas.height = cropped.height;
+      tempCanvas.getContext("2d").putImageData(cropped, 0, 0);
 
       try {
-        const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
+        const { data: { text } } = await Tesseract.recognize(tempCanvas, 'eng', {
           tessedit_char_whitelist: '0123456789'
         });
         if (text.trim()) {
@@ -59,7 +71,7 @@
     }
 
     function startAutoScan() {
-      setInterval(scanFrame, 2000); // scan every 2s
+      setInterval(scanFrame, 1500); // scan every 1.5s
     }
   </script>
 </body>
