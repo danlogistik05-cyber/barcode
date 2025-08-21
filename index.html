@@ -2,77 +2,28 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Barcode Number Reader</title>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <title>Fast Barcode Number Reader</title>
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
     video { width: 100%; max-width: 400px; border: 2px solid #333; border-radius: 8px; }
-    #output { margin-top: 15px; font-size: 24px; font-weight: bold; color: blue; }
+    #output { margin-top: 15px; font-size: 28px; font-weight: bold; color: green; }
   </style>
 </head>
 <body>
-  <h2>🔢 Barcode Number Reader</h2>
+  <h2>📦 Barcode Number Reader test</h2>
   <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" style="display:none;"></canvas>
-  <div id="output">Initializing camera...</div>
+  <div id="output">Scanning...</div>
 
   <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const output = document.getElementById('output');
-    let scanning = false;
+    const codeReader = new ZXing.BrowserBarcodeReader();
+    const output = document.getElementById("output");
 
-    // Start camera
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => {
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-          output.textContent = "Camera ready, scanning...";
-          startAutoScan();
-        };
-      })
-      .catch(err => {
-        output.textContent = "❌ Camera access failed: " + err.message;
-      });
-
-    async function scanFrame() {
-      if (scanning) return;
-      scanning = true;
-
-      // Draw current frame into canvas
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-
-      // Crop bottom strip where numbers are (10–20% from bottom)
-      const cropHeight = Math.floor(canvas.height * 0.2);
-      const cropY = canvas.height - cropHeight;
-      const cropped = ctx.getImageData(0, cropY, canvas.width, cropHeight);
-
-      // Create a temp canvas for OCR
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = cropped.width;
-      tempCanvas.height = cropped.height;
-      tempCanvas.getContext("2d").putImageData(cropped, 0, 0);
-
-      try {
-        const { data: { text } } = await Tesseract.recognize(tempCanvas, 'eng', {
-          tessedit_char_whitelist: '0123456789'
-        });
-        if (text.trim()) {
-          output.textContent = "✅ Detected: " + text.trim();
-        }
-      } catch (e) {
-        console.error(e);
+    codeReader.decodeFromVideoDevice(null, "video", (result, err) => {
+      if (result) {
+        output.textContent = "✅ " + result.getText();
       }
-
-      scanning = false;
-    }
-
-    function startAutoScan() {
-      setInterval(scanFrame, 1500); // scan every 1.5s
-    }
+    });
   </script>
 </body>
 </html>
