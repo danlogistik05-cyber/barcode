@@ -5,41 +5,55 @@
   <title>Ultra Fast Barcode Scanner</title>
   <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.30/dist/dbr.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; }
-    #scanner { width: 100%; max-width: 400px; height: 300px; margin: auto; border: 2px solid #333; border-radius: 8px; }
-    #output { margin-top: 15px; font-size: 28px; font-weight: bold; color: green; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    #scanner {
+      width: 100%;
+      max-width: 400px;
+      height: 250px; /* smaller preview */
+      margin: auto;
+      border: 2px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #output {
+      margin-top: 15px;
+      font-size: 24px;
+      font-weight: bold;
+      color: green;
+    }
   </style>
 </head>
 <body>
-  <h2>🚀</h2>
+  <h2>🚀 Ultra Fast Barcode Scanner (Code128)</h2>
   <div id="scanner" class="dce-video-container"></div>
-  <div id="output">Initializing...</div>
+  <div id="output">📷 Camera ready, scanning...</div>
 
   <script>
     (async () => {
       try {
-        // 🔑 Replace with your trial key
+        // 🔑 Replace with your Dynamsoft trial key
         Dynamsoft.DBR.BarcodeScanner.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0NDM3MTU3LU1UQTBORE0zTVRVM0xYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDQzNzE1NyIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6ODc2MzE4NDAxfQ==";
 
         const scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
 
-        // Attach camera feed into #scanner
+        // Attach preview into our fixed-size container
         await scanner.setUIElement(document.getElementById('scanner'));
 
-        // Only scan Code128
+        // Restrict to Code128 for speed
         let settings = await scanner.getRuntimeSettings();
         settings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_CODE_128;
         await scanner.updateRuntimeSettings(settings);
 
-        scanner.onFrameRead = results => {
-          for (let result of results) {
-            document.getElementById("output").textContent = "✅ " + result.barcodeText;
-            scanner.stopScanning();
-          }
+        // Show result when a new code is read
+        scanner.onUnduplicatedRead = (txt, result) => {
+          document.getElementById("output").textContent = "✅ " + txt;
         };
 
         await scanner.show();
-        document.getElementById("output").textContent = "📷 Camera ready, scanning...";
       } catch (err) {
         console.error(err);
         document.getElementById("output").textContent = "❌ Error: " + err.message;
