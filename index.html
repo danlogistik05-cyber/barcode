@@ -2,87 +2,32 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Fast Number Scanner</title>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <title>Ultra Fast Barcode Scanner</title>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.30/dist/dbr.js"></script>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
-    video { width: 100%; max-width: 400px; border: 2px solid #333; border-radius: 8px; }
+    #scanner { width: 100%; max-width: 400px; margin: auto; }
     #output { margin-top: 15px; font-size: 28px; font-weight: bold; color: green; }
   </style>
 </head>
 <body>
-  <h2>🔢 TEST Fast Number Scanner</h2>
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" style="display:none;"></canvas>
+  <h2>🚀 Ultra Fast Barcode Scanner</h2>
+  <div id="scanner"></div>
   <div id="output">Scanning...</div>
 
   <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const output = document.getElementById('output');
-    let scanning = false;
-
-    // Start camera
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => {
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-          startAutoScan();
-        };
-      })
-      .catch(err => {
-        output.textContent = "❌ Camera failed: " + err.message;
-      });
-
-    async function scanFrame() {
-      if (scanning) return;
-      scanning = true;
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-
-      // Crop bottom 15% of video where numbers are
-      const cropHeight = Math.floor(canvas.height * 0.15);
-      const cropY = canvas.height - cropHeight;
-      const cropped = ctx.getImageData(0, cropY, canvas.width, cropHeight);
-
-      // Create temp canvas for processing
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = cropped.width;
-      tempCanvas.height = cropped.height;
-      const tctx = tempCanvas.getContext("2d");
-      tctx.putImageData(cropped, 0, 0);
-
-      // Preprocess: grayscale & threshold
-      const imgData = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-      let d = imgData.data;
-      for (let i = 0; i < d.length; i += 4) {
-        let avg = (d[i] + d[i+1] + d[i+2]) / 3;
-        let val = avg > 150 ? 255 : 0; // threshold
-        d[i] = d[i+1] = d[i+2] = val;
-      }
-      tctx.putImageData(imgData, 0, 0);
-
-      try {
-        const { data: { text } } = await Tesseract.recognize(tempCanvas, 'eng', {
-          tessedit_char_whitelist: '0123456789'
-        });
-        const clean = text.trim().replace(/\D/g, ''); // keep only digits
-        if (clean) {
-          output.textContent = "✅ " + clean;
+    (async () => {
+      let scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+      scanner.updateRuntimeSettings("speed"); // optimize for speed
+      scanner.onFrameRead = results => {
+        for (let result of results) {
+          document.getElementById("output").textContent = "✅ " + result.barcodeText;
+          scanner.stopScanning(); // stop after first scan
         }
-      } catch (e) {
-        console.error(e);
-      }
-
-      scanning = false;
-    }
-
-    function startAutoScan() {
-      setInterval(scanFrame, 1000); // scan every 1s
-    }
+      };
+      await scanner.setUIElement(document.getElementById('scanner'));
+      await scanner.show();
+    })();
   </script>
 </body>
 </html>
