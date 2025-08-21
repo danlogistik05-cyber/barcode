@@ -13,24 +13,37 @@
     #scanner {
       width: 100%;
       max-width: 400px;
-      height: 250px; /* smaller preview */
+      height: 220px; /* smaller preview */
       margin: auto;
       border: 2px solid #333;
       border-radius: 8px;
       overflow: hidden;
+      position: relative;
+    }
+    /* overlay guide box */
+    #guide {
+      position: absolute;
+      top: 30%;
+      left: 15%;
+      width: 70%;
+      height: 40%;
+      border: 2px dashed red;
+      pointer-events: none;
     }
     #output {
-      margin-top: 15px;
-      font-size: 24px;
+      margin-top: 20px;
+      font-size: 28px;
       font-weight: bold;
       color: green;
     }
   </style>
 </head>
 <body>
-  <h2>🚀 Ultra Fast Barcode Scanner (Code128)</h2>
-  <div id="scanner" class="dce-video-container"></div>
-  <div id="output">📷 Camera ready, scanning...</div>
+  <h2>🚀</h2>
+  <div id="scanner" class="dce-video-container">
+    <div id="guide"></div> <!-- guide box -->
+  </div>
+  <div id="output">📷 Hold barcode inside the red box</div>
 
   <script>
     (async () => {
@@ -39,8 +52,6 @@
         Dynamsoft.DBR.BarcodeScanner.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0NDM3MTU3LU1UQTBORE0zTVRVM0xYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDQzNzE1NyIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6ODc2MzE4NDAxfQ==";
 
         const scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
-
-        // Attach preview into our fixed-size container
         await scanner.setUIElement(document.getElementById('scanner'));
 
         // Restrict to Code128 for speed
@@ -48,7 +59,17 @@
         settings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_CODE_128;
         await scanner.updateRuntimeSettings(settings);
 
-        // Show result when a new code is read
+        // Define region of interest (center rectangle)
+        scanner.setScanSettings({
+          Region: {
+            regionLeft: 15,   // percentage
+            regionTop: 30,
+            regionRight: 85,
+            regionBottom: 70,
+            regionMeasuredByPercentage: 1
+          }
+        });
+
         scanner.onUnduplicatedRead = (txt, result) => {
           document.getElementById("output").textContent = "✅ " + txt;
         };
